@@ -8,13 +8,14 @@ var request = require('request');
  * @param {string} key    API Key
  * @param {string} secret API Secret
  */
-var Cryptsy = function(key, secret) {
+var Cryptsy = function(key, secret, requestOptions) {
     this.key = key;
     this.secret = secret;
+    this.requestOptions = requestOptions;
     this.nonce = Math.floor((new Date()).getTime() / 1000);
     this.userAgent = 'Mozilla/4.0 (compatible; Cryptsy API Node.js client; NodeJS/' + process.version + ')';
 
-    this.privateApiUrl = 'https://www.cryptsy.com/api';
+    this.privateApiUrl = "https://api.cryptsy.com/api"; // new and improved endpoint
     this.publicApiUrl = 'http://pubapi.cryptsy.com/api.php?';
 
     this.publicMethods = [
@@ -24,8 +25,9 @@ var Cryptsy = function(key, secret) {
     this.privateMethods = [
         'getinfo', 'getmarkets', 'mytransactions', 'markettrades', 'marketorders', 'mytrades',
         'allmytrades', 'myorders', 'depth', 'allmyorders', 'createorder', 'cancelorder',
-        'cancelmarketorders', 'cancelallorders', 'calculatefees', 'generatenewaddress'
-    ];
+        'cancelmarketorders', 'cancelallorders', 'calculatefees', 'generatenewaddress', 'makewithdrawal',
+        'mytransfers', 'getwalletstatus'
+    ]; // note getwalletstatus needs pre-approval from cryptsy by signing an NDA
 }
 
 /**
@@ -71,9 +73,11 @@ Cryptsy.prototype.getRequest = function(params, callback) {
         url: this.publicApiUrl + querystring.stringify(params),
         method: 'GET',
         headers: {
-            'User-Agent': this.userAgent,
+            'User-Agent': this.userAgent
         }
     }
+    for (var key in this.requestOptions)
+        options[key] = this.requestOptions[key];
     request.get(options, function (err, response, body) {
         this.parseResponse(err, response, body, callback);
     }.bind(this));
@@ -93,10 +97,11 @@ Cryptsy.prototype.postRequest = function(params, callback) {
         headers: {
             'Sign': this.getSignatureFromString(querystring.stringify(params)),
             'Key': this.key,
-            'User-Agent': this.userAgent,
+            'User-Agent': this.userAgent
         }
     };
-
+    for (var key in this.requestOptions)
+        options[key] = this.requestOptions[key];
     request.post(options, function (err, response, body) {
         this.parseResponse(err, response, body, callback);
     }.bind(this));
